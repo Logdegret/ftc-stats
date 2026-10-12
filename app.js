@@ -127,15 +127,85 @@ render();
 
 const SCOUT_KEY = 'hiveboard.scouting.v1';
 const TEAM_API = 'https://api.ftcscout.org/rest/v1/teams/';
+const GRAPHQL_API = 'https://api.ftcscout.org/graphql';
+const CURRENT_SEASON = 2026;
+const SEASON_GAMES = {2019:'Skystone',2020:'Ultimate Goal',2021:'Freight Frenzy',2022:'Power Play',2023:'Centerstage',2024:'Into the Deep',2025:'DECODE',2026:'BIOBUZZ'};
 const onlineProfiles = new Map();
+const onlineHistories = new Map();
 let lookupSequence = 0;
+function seasonLabel(year) { return `${year}–${String(year + 1).slice(-2)}${SEASON_GAMES[year] ? ` · ${SEASON_GAMES[year]}` : ''}`; }
+function rankPercentile(stat, count) {
+  const rank = Number(stat?.rank);
+  return Number.isInteger(rank) && Number.isInteger(count) && count > 1 && rank > 0 ? Math.max(0,Math.min(100,Math.round((count-rank)/(count-1)*100))) : null;
+}
+function percentileLabel(value) {
+  if (value === null) return '—';
+  const suffix = value % 100 >= 11 && value % 100 <= 13 ? 'th' : ({1:'st',2:'nd',3:'rd'}[value % 10] || 'th');
+  return `${value}${suffix} %ile`;
+}
+async function graphQuery(query) {
+  const url = `${GRAPHQL_API}?${new URLSearchParams({query})}`;
+  const response = await fetch(url, {headers:{'apollo-require-preflight':'true'},signal:AbortSignal.timeout(12000)});
+  if (!response.ok) throw new Error('history-unavailable');
+  const json = await response.json();
+  if (json.errors?.length) throw new Error('history-unavailable');
+  return json.data?.teamByNumber;
+}
+async function fetchTeamHistory(team) {
+  const info = await graphQuery(`query { teamByNumber(number:${Number(team)}) { activeSeasons } }`);
+  const active = [...new Set((info?.activeSeasons || []).filter(y => Number.isInteger(y) && y <= CURRENT_SEASON))].sort((a,b) => b-a);
+  if (!active.length) return {rows:[],active};
+  const fields = active.map(year => `s${year}:quickStats(season:${year}){season count tot{value rank} auto{value rank} dc{value rank}}`).join(' ');
+  const data = await graphQuery(`query { teamByNumber(number:${Number(team)}) { ${fields} } }`);
+  if (!data) throw new Error('history-unavailable');
+  const rows = active.map(year => data[`s${year}`]).filter(Boolean).sort((a,b) => b.season-a.season);
+  return {rows,active};
+}
+function partnerOutlook(team, history) {
+  const rows = history?.rows || [];
+  const local = observations.filter(o => o.team === team);
+  const graded = rows.map(row => ({season:row.season,percentile:rankPercentile(row.tot,row.count)})).filter(row => row.percentile !== null);
+  const weight = year => Math.pow(0.72,Math.max(0,CURRENT_SEASON-year));
+  const denominator = graded.reduce((n,row) => n+weight(row.season),0);
+  const historical = denominator ? Math.round(graded.reduce((n,row) => n+row.percentile*weight(row.season),0)/denominator) : null;
+  const reliability = local.length ? local.reduce((n,o) => n+o.reliability,0)/local.length : null;
+  const latest = graded[0];
+  let title, tone, reason;
+  if (history?.unavailable) { title='History unavailable'; tone='neutral'; reason='The online season history could not load. Retry before making a partner decision.'; }
+  else if (historical === null && local.length < 2) { title='Need more evidence'; tone='neutral'; reason='There are no ranked seasons to compare. Scout this season’s robot before choosing an alliance partner.'; }
+  else if (local.length >= 2 && reliability < 2.5) { title='Hold for reliability'; tone='caution'; reason='Your scouting notes show repeated reliability issues, even if past scoring was strong.'; }
+  else if (historical !== null && historical >= 75 && (latest.season >= CURRENT_SEASON-1 || (local.length >= 2 && reliability >= 4))) { title='Strong candidate'; tone='positive'; reason='Recent season rankings are strong. Check this season’s robot and role fit before committing.'; }
+  else if (historical !== null && historical >= 65) { title='Promising history'; tone='positive'; reason='Past rankings look competitive. Current-season scouting should confirm the fit.'; }
+  else if (historical !== null && historical >= 50) { title='Consider after scouting'; tone='neutral'; reason='Historical results are mixed. Compare their current robot with your alliance needs.'; }
+  else if (historical !== null) { title='Lower priority from history'; tone='caution'; reason='Historical rankings are below the field midpoint. Look for clear current-season improvement.'; }
+  else if (reliability >= 4) { title='Promising locally'; tone='positive'; reason='Your scouting notes are favorable, but online ranked history is unavailable.'; }
+  else { title='Need more scouting'; tone='neutral'; reason='Local observations alone do not yet support a confident partner call.'; }
+  const chips = [`${graded.length} ranked ${graded.length === 1 ? 'season' : 'seasons'}`];
+  if (historical !== null) chips.push(`${percentileLabel(historical)} weighted`);
+  if (latest) chips.push(`${latest.season} season: ${percentileLabel(latest.percentile)}`);
+  if (reliability !== null) chips.push(`${local.length} local reports · ${reliability.toFixed(1)}/5 reliability`);
+  if (local.length) chips.push(`${(local.reduce((n,o) => n+o.tips,0)/local.length).toFixed(1)} avg tips · ${percent(local.reduce((n,o) => n+o.made,0),local.reduce((n,o) => n+o.attempts,0))} shots`);
+  return `<div class="partner-outlook ${tone}"><div class="partner-kicker">PARTNER OUTLOOK · PRELIMINARY</div><strong>${escapeHtml(title)}</strong><p>${escapeHtml(reason)}</p><div class="partner-chips">${chips.map(chip => `<span>${escapeHtml(chip)}</span>`).join('')}</div></div>`;
+}
+function renderLookup(team) {
+  const profile = onlineProfiles.get(team);
+  if (!profile) return;
+  const history = onlineHistories.get(team);
+  const current = history?.rows.find(row => row.season === CURRENT_SEASON);
+  const opr = Number(current?.tot?.value);
+  const rank = Number(current?.tot?.rank);
+  const location = [profile.city,profile.state,profile.country].filter(Boolean).join(', ');
+  const rows = history?.rows || [];
+  const historyHtml = history?.unavailable ? '<p class="history-message">Online season history is temporarily unavailable.</p>' : rows.length ? `<div class="history-scroll"><table class="season-table"><thead><tr><th>PAST GAME</th><th>WORLD RANK</th><th>OVERALL</th><th>AUTO</th><th>TELEOP</th></tr></thead><tbody>${rows.map(row => `<tr><td><strong>${escapeHtml(seasonLabel(row.season))}</strong></td><td>#${Number(row.tot.rank).toLocaleString()} of ${Number(row.count).toLocaleString()}</td><td>${percentileLabel(rankPercentile(row.tot,row.count))}</td><td>${percentileLabel(rankPercentile(row.auto,row.count))}</td><td>${percentileLabel(rankPercentile(row.dc,row.count))}</td></tr>`).join('')}</tbody></table></div>` : '<p class="history-message">No ranked past-season data is available for this team yet.</p>';
+  $('lookupResult').innerHTML = `<div class="lookup-record"><div><div class="lookup-name">#${escapeHtml(team)} · ${escapeHtml(profile.name)}</div><div class="lookup-meta">${escapeHtml(location || 'Location not listed')}${profile.rookieYear ? ` · Rookie year ${escapeHtml(profile.rookieYear)}` : ''}</div>${profile.schoolName ? `<div class="lookup-meta">${escapeHtml(profile.schoolName)}</div>` : ''}</div><div class="lookup-season"><span>2026–27 SEASON</span><strong>${Number.isFinite(opr) ? `${opr.toFixed(1)} OPR` : 'No results yet'}</strong>${Number.isInteger(rank) && rank > 0 ? `<small>World rank #${rank.toLocaleString()}</small>` : ''}</div></div>${partnerOutlook(team,history)}<div class="season-history-heading"><strong>Season history</strong><span>Rank percentiles compare within each game</span></div>${historyHtml}<div class="lookup-links"><a href="https://ftcscout.org/teams/${team}" target="_blank" rel="noopener noreferrer">Full team record ↗</a><button type="button" id="useLookupTeam">Use in scouting form ↓</button></div>`;
+}
 async function lookupTeam(number) {
   const team = String(number || '').trim();
   if (!/^\d{1,6}$/.test(team)) { $('lookupResult').textContent = 'Enter a numeric FTC team number.'; return; }
   $('lookupNumber').value = team;
   const sequence = ++lookupSequence;
   $('lookupBtn').disabled = true;
-  $('lookupResult').textContent = `Looking up team #${team}…`;
+  $('lookupResult').textContent = `Looking up team #${team} and its past seasons…`;
   try {
     let profile = onlineProfiles.get(team);
     if (!profile) {
@@ -146,16 +216,14 @@ async function lookupTeam(number) {
       if (Number(profile.number) !== Number(team) || typeof profile.name !== 'string') throw new Error('unavailable');
       onlineProfiles.set(team, profile);
     }
-    let stats = null;
-    try {
-      const response = await fetch(`${TEAM_API}${team}/quick-stats?season=2026`, {signal:AbortSignal.timeout(10000)});
-      if (response.ok) stats = await response.json();
-    } catch { /* Team profile remains useful when stats are unavailable. */ }
+    let history = onlineHistories.get(team);
+    if (!history || Date.now()-history.fetchedAt > 300000) {
+      try { history = {...await fetchTeamHistory(team),fetchedAt:Date.now()}; }
+      catch { history = {rows:[],active:[],unavailable:true,fetchedAt:0}; }
+      onlineHistories.set(team,history);
+    }
     if (sequence !== lookupSequence) return;
-    const location = [profile.city, profile.state, profile.country].filter(Boolean).join(', ');
-    const opr = Number(stats?.tot?.value);
-    const rank = Number(stats?.tot?.rank);
-    $('lookupResult').innerHTML = `<div class="lookup-record"><div><div class="lookup-name">#${escapeHtml(team)} · ${escapeHtml(profile.name)}</div><div class="lookup-meta">${escapeHtml(location || 'Location not listed')}${profile.rookieYear ? ` · Rookie year ${escapeHtml(profile.rookieYear)}` : ''}</div>${profile.schoolName ? `<div class="lookup-meta">${escapeHtml(profile.schoolName)}</div>` : ''}</div><div class="lookup-season"><span>2026–27 SEASON</span><strong>${Number.isFinite(opr) ? `${opr.toFixed(1)} OPR` : 'No results yet'}</strong>${Number.isInteger(rank) && rank > 0 ? `<small>World rank #${rank.toLocaleString()}</small>` : ''}</div></div><div class="lookup-links"><a href="https://ftcscout.org/teams/${team}" target="_blank" rel="noopener noreferrer">Full team record ↗</a><button type="button" id="useLookupTeam">Use in scouting form ↓</button></div>`;
+    renderLookup(team);
     renderScouting();
   } catch (error) {
     if (sequence !== lookupSequence) return;
@@ -184,6 +252,7 @@ function renderScouting() {
   $('scoutBoard').innerHTML = ranked.length ? ranked.map(([team,x]) => { const name = onlineProfiles.get(team)?.name || observations.find(o => o.team === team && o.teamName)?.teamName; return `<div class="scout-board-row"><a class="scout-team-link" href="https://ftcscout.org/teams/${escapeHtml(team)}" target="_blank" rel="noopener noreferrer">#${escapeHtml(team)}${name ? `<small>${escapeHtml(name)}</small>` : ''}</a><span>${x.runs}</span><span>${(x.tips/x.runs).toFixed(1)}</span><span>${percent(x.made,x.attempts)}</span></div>`; }).join('') : '<div class="empty-board">Your scouted teams will appear here.</div>';
   $('scoutCount').textContent = `${observations.length} ${observations.length === 1 ? 'OBSERVATION' : 'OBSERVATIONS'}`;
   $('scoutHistory').innerHTML = observations.length ? [...observations].reverse().map(o => `<tr><td class="match-cell"><a href="https://ftcscout.org/teams/${escapeHtml(o.team)}" target="_blank" rel="noopener noreferrer">#${escapeHtml(o.team)}</a></td><td>${escapeHtml(o.round)}</td><td>${o.attempts}</td><td>${o.made}</td><td><span class="tip-pill">${o.tips}</span></td><td>${percent(o.made,o.attempts)}</td><td>${o.reliability}/5</td><td class="notes-cell">${escapeHtml(o.notes || '—')}</td><td><button class="delete-btn" type="button" data-scout-delete="${escapeHtml(o.id)}" aria-label="Delete scouting observation for team ${escapeHtml(o.team)}" title="Delete observation">×</button></td></tr>`).join('') : '<tr><td colspan="9" class="empty-table">No scouting observations yet.</td></tr>';
+  if (onlineProfiles.has($('lookupNumber').value.trim())) renderLookup($('lookupNumber').value.trim());
 }
 $('scoutForm').addEventListener('submit', event => {
   event.preventDefault();
