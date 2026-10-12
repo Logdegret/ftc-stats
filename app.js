@@ -126,6 +126,46 @@ $('importInput').addEventListener('change', async e => {
 render();
 
 const SCOUT_KEY = 'hiveboard.scouting.v1';
+const TEAM_API = 'https://api.ftcscout.org/rest/v1/teams/';
+const onlineProfiles = new Map();
+let lookupSequence = 0;
+async function lookupTeam(number) {
+  const team = String(number || '').trim();
+  if (!/^\d{1,6}$/.test(team)) { $('lookupResult').textContent = 'Enter a numeric FTC team number.'; return; }
+  $('lookupNumber').value = team;
+  const sequence = ++lookupSequence;
+  $('lookupBtn').disabled = true;
+  $('lookupResult').textContent = `Looking up team #${team}…`;
+  try {
+    let profile = onlineProfiles.get(team);
+    if (!profile) {
+      const response = await fetch(TEAM_API + team, {signal:AbortSignal.timeout(10000)});
+      if (response.status === 404) throw new Error('not-found');
+      if (!response.ok) throw new Error('unavailable');
+      profile = await response.json();
+      if (Number(profile.number) !== Number(team) || typeof profile.name !== 'string') throw new Error('unavailable');
+      onlineProfiles.set(team, profile);
+    }
+    let stats = null;
+    try {
+      const response = await fetch(`${TEAM_API}${team}/quick-stats?season=2026`, {signal:AbortSignal.timeout(10000)});
+      if (response.ok) stats = await response.json();
+    } catch { /* Team profile remains useful when stats are unavailable. */ }
+    if (sequence !== lookupSequence) return;
+    const location = [profile.city, profile.state, profile.country].filter(Boolean).join(', ');
+    const opr = Number(stats?.tot?.value);
+    const rank = Number(stats?.tot?.rank);
+    $('lookupResult').innerHTML = `<div class="lookup-record"><div><div class="lookup-name">#${escapeHtml(team)} · ${escapeHtml(profile.name)}</div><div class="lookup-meta">${escapeHtml(location || 'Location not listed')}${profile.rookieYear ? ` · Rookie year ${escapeHtml(profile.rookieYear)}` : ''}</div>${profile.schoolName ? `<div class="lookup-meta">${escapeHtml(profile.schoolName)}</div>` : ''}</div><div class="lookup-season"><span>2026–27 SEASON</span><strong>${Number.isFinite(opr) ? `${opr.toFixed(1)} OPR` : 'No results yet'}</strong>${Number.isInteger(rank) && rank > 0 ? `<small>World rank #${rank.toLocaleString()}</small>` : ''}</div></div><div class="lookup-links"><a href="https://ftcscout.org/teams/${team}" target="_blank" rel="noopener noreferrer">Full team record ↗</a><button type="button" id="useLookupTeam">Use in scouting form ↓</button></div>`;
+    renderScouting();
+  } catch (error) {
+    if (sequence !== lookupSequence) return;
+    $('lookupResult').textContent = error.message === 'not-found' ? `No online record found for team #${team}. You can still enter scouting notes manually.` : 'Team records are temporarily unavailable. Try again later; manual scouting still works.';
+  } finally { if (sequence === lookupSequence) $('lookupBtn').disabled = false; }
+}
+$('lookupBtn').addEventListener('click', () => lookupTeam($('lookupNumber').value));
+$('lookupNumber').addEventListener('keydown', event => { if (event.key === 'Enter') { event.preventDefault(); lookupTeam(event.currentTarget.value); } });
+$('lookupResult').addEventListener('click', event => { if (event.target.id !== 'useLookupTeam') return; $('scoutForm').elements.team.value = $('lookupNumber').value; $('scoutForm').scrollIntoView({behavior:'smooth',block:'start'}); });
+$('scoutForm').elements.team.addEventListener('blur', event => { if (/^\d{1,6}$/.test(event.target.value.trim())) lookupTeam(event.target.value); });
 let observations = (() => { try { const v = JSON.parse(localStorage.getItem(SCOUT_KEY) || '[]'); return Array.isArray(v) ? v.filter(validObservation) : []; } catch { return []; } })();
 function validObservation(o) {
   return o && /^\d{1,6}$/.test(o.team) && typeof o.round === 'string' && o.round.trim() &&
@@ -141,14 +181,15 @@ function renderScouting() {
     grouped.set(o.team,x);
   });
   const ranked = [...grouped].sort((a,b) => b[1].tips/b[1].runs - a[1].tips/a[1].runs || (b[1].attempts ? b[1].made/b[1].attempts : 0) - (a[1].attempts ? a[1].made/a[1].attempts : 0));
-  $('scoutBoard').innerHTML = ranked.length ? ranked.map(([team,x]) => `<div class="scout-board-row"><strong>#${escapeHtml(team)}</strong><span>${x.runs}</span><span>${(x.tips/x.runs).toFixed(1)}</span><span>${percent(x.made,x.attempts)}</span></div>`).join('') : '<div class="empty-board">Your scouted teams will appear here.</div>';
+  $('scoutBoard').innerHTML = ranked.length ? ranked.map(([team,x]) => { const name = onlineProfiles.get(team)?.name || observations.find(o => o.team === team && o.teamName)?.teamName; return `<div class="scout-board-row"><a class="scout-team-link" href="https://ftcscout.org/teams/${escapeHtml(team)}" target="_blank" rel="noopener noreferrer">#${escapeHtml(team)}${name ? `<small>${escapeHtml(name)}</small>` : ''}</a><span>${x.runs}</span><span>${(x.tips/x.runs).toFixed(1)}</span><span>${percent(x.made,x.attempts)}</span></div>`; }).join('') : '<div class="empty-board">Your scouted teams will appear here.</div>';
   $('scoutCount').textContent = `${observations.length} ${observations.length === 1 ? 'OBSERVATION' : 'OBSERVATIONS'}`;
-  $('scoutHistory').innerHTML = observations.length ? [...observations].reverse().map(o => `<tr><td class="match-cell">#${escapeHtml(o.team)}</td><td>${escapeHtml(o.round)}</td><td>${o.attempts}</td><td>${o.made}</td><td><span class="tip-pill">${o.tips}</span></td><td>${percent(o.made,o.attempts)}</td><td>${o.reliability}/5</td><td class="notes-cell">${escapeHtml(o.notes || '—')}</td><td><button class="delete-btn" type="button" data-scout-delete="${escapeHtml(o.id)}" aria-label="Delete scouting observation for team ${escapeHtml(o.team)}" title="Delete observation">×</button></td></tr>`).join('') : '<tr><td colspan="9" class="empty-table">No scouting observations yet.</td></tr>';
+  $('scoutHistory').innerHTML = observations.length ? [...observations].reverse().map(o => `<tr><td class="match-cell"><a href="https://ftcscout.org/teams/${escapeHtml(o.team)}" target="_blank" rel="noopener noreferrer">#${escapeHtml(o.team)}</a></td><td>${escapeHtml(o.round)}</td><td>${o.attempts}</td><td>${o.made}</td><td><span class="tip-pill">${o.tips}</span></td><td>${percent(o.made,o.attempts)}</td><td>${o.reliability}/5</td><td class="notes-cell">${escapeHtml(o.notes || '—')}</td><td><button class="delete-btn" type="button" data-scout-delete="${escapeHtml(o.id)}" aria-label="Delete scouting observation for team ${escapeHtml(o.team)}" title="Delete observation">×</button></td></tr>`).join('') : '<tr><td colspan="9" class="empty-table">No scouting observations yet.</td></tr>';
 }
 $('scoutForm').addEventListener('submit', event => {
   event.preventDefault();
   const form = event.currentTarget, data = new FormData(form);
-  const o = {id:crypto.randomUUID(),team:String(data.get('team')||'').trim(),round:String(data.get('round')||'').trim(),attempts:Number(data.get('attempts')),made:Number(data.get('made')),tips:Number(data.get('tips')),reliability:Number(data.get('reliability')),notes:String(data.get('notes')||'').trim()};
+  const team = String(data.get('team')||'').trim();
+  const o = {id:crypto.randomUUID(),team,teamName:onlineProfiles.get(team)?.name || '',round:String(data.get('round')||'').trim(),attempts:Number(data.get('attempts')),made:Number(data.get('made')),tips:Number(data.get('tips')),reliability:Number(data.get('reliability')),notes:String(data.get('notes')||'').trim()};
   if (!validObservation(o)) { $('scoutError').textContent = 'Enter a team number and run ID. Counts must be whole numbers from 0–999, and landed shots cannot exceed attempts.'; return; }
   $('scoutError').textContent = ''; observations.push(o); saveScouting(); renderScouting(); form.reset();
 });
@@ -158,7 +199,7 @@ $('scoutHistory').addEventListener('click', event => {
   observations = observations.filter(o => o.id !== button.dataset.scoutDelete); saveScouting(); renderScouting();
 });
 $('exportScoutBtn').addEventListener('click', () => {
-  const headers = ['team','round','attempts','made','tips','reliability','notes'];
+  const headers = ['team','teamName','round','attempts','made','tips','reliability','notes'];
   const csv = [headers.join(','), ...observations.map(o => headers.map(k => csvCell(o[k])).join(','))].join('\r\n');
   const link = document.createElement('a'); link.href = URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));
   link.download = 'hiveboard-scouting.csv'; link.click(); setTimeout(() => URL.revokeObjectURL(link.href),1000);
