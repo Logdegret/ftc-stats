@@ -36,7 +36,6 @@ function render() {
   $('accuracyTotal').textContent = percent(made, attempts);
   $('pointsTotal').textContent = visible.reduce((total, e) => total + points(e), 0).toLocaleString();
   renderTrend(visible);
-  renderBoard(visible);
   renderDriverPairs(entries.filter(e => selectedType === 'all' || (e.type || 'match') === selectedType));
   renderHistory(visible);
 }
@@ -46,16 +45,6 @@ function renderTrend(list) {
   if (!recent.length) { $('trend').innerHTML = '<div class="empty-chart">Your trend will appear here after you log a session.</div>'; return; }
   const max = Math.max(1, ...recent.map(e => e.tips));
   $('trend').innerHTML = recent.map(e => `<div class="bar-wrap" title="${escapeHtml(e.match)} · ${e.tips} tips"><span class="bar-value">${e.tips}</span><div class="bar" style="height:${Math.max(3, e.tips / max * 112)}px"></div><span class="bar-label">${escapeHtml(e.match)}</span></div>`).join('');
-}
-function renderBoard(list) {
-  const grouped = new Map();
-  list.forEach(e => {
-    const x = grouped.get(e.driver) || {tips:0,made:0,attempts:0};
-    x.tips += e.tips; x.made += e.made; x.attempts += e.attempts;
-    grouped.set(e.driver, x);
-  });
-  const rows = [...grouped].sort((a,b) => b[1].tips - a[1].tips || b[1].made - a[1].made || a[0].localeCompare(b[0]));
-  $('driverBoard').innerHTML = rows.length ? rows.map(([name,x]) => `<div class="board-row"><span class="driver-name"><span class="avatar">${escapeHtml(name.slice(0,1).toUpperCase())}</span>${escapeHtml(name)}</span><span class="tips">${x.tips}</span><span>${percent(x.made,x.attempts)}</span></div>`).join('') : '<div class="empty-board">Add session entries to compare drivers.</div>';
 }
 function renderDriverPairs(list) {
   const byDriver = new Map();
