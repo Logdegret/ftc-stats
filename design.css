@@ -119,3 +119,6 @@ footer{border-top-color:#e2e8de;font-family:'DM Mono',monospace;color:#9aac9c}
 .role-pill.both{background:#e4e9ef;color:#4e637c}
 @media(max-width:920px){.two-driver-grid{grid-template-columns:1fr}}
 @media(max-width:480px){.session-meta{grid-template-columns:1fr}.driver-entry{padding:16px}.driver-fields{gap:13px 10px}}
+.driver-fields label[hidden]{display:none}
+.driver-entry[data-role="driver"]{background:#f5f9ef;border-color:#dce9d0}
+.driver-entry[data-role="shooter"]{background:#fbfaf6;border-color:#ece7db}

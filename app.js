@@ -101,6 +101,23 @@ function renderHistory(list) {
   }).join('') : '<tr><td colspan="9" class="empty-table">No sessions yet. Log your first run above.</td></tr>';
 }
 
+function updateRoleFields() {
+  document.querySelectorAll('#matchForm .driver-entry').forEach(card => {
+    const role = card.querySelector('select[name^="role"]').value;
+    card.dataset.role = role;
+    card.querySelectorAll('[data-stat]').forEach(label => {
+      const show = role === 'both' || (role === 'driver' ? label.dataset.stat === 'tips' : label.dataset.stat === 'shots');
+      const input = label.querySelector('input');
+      label.hidden = !show;
+      input.disabled = !show;
+      if (!show) input.value = '0';
+    });
+  });
+}
+$('matchForm').addEventListener('change', event => {
+  if (event.target.matches('select[name^="role"]')) updateRoleFields();
+});
+updateRoleFields();
 $('matchForm').addEventListener('submit', event => {
   event.preventDefault();
   const form = event.currentTarget;
@@ -116,7 +133,7 @@ $('matchForm').addEventListener('submit', event => {
   if (!match || newEntries.some(e => !e.driver || !validEntry(e))) { $('formError').textContent = 'Enter both driver names and a session ID. Counts must be whole numbers from 0–999, and landed shots cannot exceed attempts.'; return; }
   if (newEntries[0].driver.toLowerCase() === newEntries[1].driver.toLowerCase()) { $('formError').textContent = 'Choose two different drivers.'; return; }
   $('formError').textContent = '';
-  entries.push(...newEntries); save(); render(); form.reset();
+  entries.push(...newEntries); save(); render(); form.reset(); updateRoleFields();
   $('history').scrollIntoView({behavior:'smooth',block:'start'});
 });
 $('driverFilter').addEventListener('change', e => { selectedDriver = e.target.value; render(); });
