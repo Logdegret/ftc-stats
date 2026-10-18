@@ -37,6 +37,7 @@ function render() {
   $('pointsTotal').textContent = visible.reduce((total, e) => total + points(e), 0).toLocaleString();
   renderTrend(visible);
   renderBoard(visible);
+  renderDriverPairs(entries.filter(e => selectedType === 'all' || (e.type || 'match') === selectedType));
   renderHistory(visible);
 }
 
@@ -54,7 +55,39 @@ function renderBoard(list) {
     grouped.set(e.driver, x);
   });
   const rows = [...grouped].sort((a,b) => b[1].tips - a[1].tips || b[1].made - a[1].made || a[0].localeCompare(b[0]));
-  $('driverBoard').innerHTML = rows.length ? rows.map(([name,x]) => `<div class="board-row"><span class="driver-name"><span class="avatar">${escapeHtml(name.slice(0,1).toUpperCase())}</span>${escapeHtml(name)}</span><span class="tips">${x.tips}</span><span>${percent(x.made,x.attempts)}</span></div>`).join('') : '<div class="empty-board">Add match entries to compare drivers.</div>';
+  $('driverBoard').innerHTML = rows.length ? rows.map(([name,x]) => `<div class="board-row"><span class="driver-name"><span class="avatar">${escapeHtml(name.slice(0,1).toUpperCase())}</span>${escapeHtml(name)}</span><span class="tips">${x.tips}</span><span>${percent(x.made,x.attempts)}</span></div>`).join('') : '<div class="empty-board">Add session entries to compare drivers.</div>';
+}
+function renderDriverPairs(list) {
+  const byDriver = new Map();
+  list.forEach(e => {
+    const record = byDriver.get(e.driver) || {name:e.driver,runs:0,points:0,attempts:0,made:0};
+    record.runs++;
+    record.points += points(e);
+    record.attempts += e.attempts;
+    record.made += e.made;
+    byDriver.set(e.driver,record);
+  });
+  const drivers = [...byDriver.values()].sort((a,b) => a.name.localeCompare(b.name));
+  const pairs = [];
+  for (let i = 0; i < drivers.length; i++) for (let j = i + 1; j < drivers.length; j++) {
+    const a = drivers[i], b = drivers[j];
+    const expectedPoints = a.points/a.runs + b.points/b.runs;
+    const expectedAttempts = a.attempts/a.runs + b.attempts/b.runs;
+    const expectedMade = a.made/a.runs + b.made/b.runs;
+    pairs.push({a,b,expectedPoints,efficiency:expectedAttempts ? expectedPoints/expectedAttempts : null,accuracy:expectedAttempts ? expectedMade/expectedAttempts : null});
+  }
+  const pairName = pair => `${pair.a.name} + ${pair.b.name}`;
+  const pointsOrder = [...pairs].sort((a,b) => b.expectedPoints-a.expectedPoints || pairName(a).localeCompare(pairName(b)));
+  const efficiencyOrder = [...pairs].filter(p => p.efficiency !== null).sort((a,b) => b.efficiency-a.efficiency || b.expectedPoints-a.expectedPoints || pairName(a).localeCompare(pairName(b)));
+  const bestPoints = pointsOrder[0];
+  const bestEfficiency = efficiencyOrder[0];
+  $('pairCount').textContent = `${pairs.length} ${pairs.length === 1 ? 'PAIR' : 'PAIRS'}`;
+  const metric = (label,value) => `<div class="pair-metric"><span>${label}</span><strong>${value}</strong></div>`;
+  if (!bestPoints) $('pairSummary').innerHTML = '<div class="empty-board">Log two drivers to compare them.</div>';
+  else if (pairs.length === 1) $('pairSummary').innerHTML = `<div class="pair-title"><span>YOUR DRIVER PAIR</span><strong>${escapeHtml(pairName(bestPoints))}</strong></div><div class="pair-metrics">${metric('POINTS / RUN',bestPoints.expectedPoints.toFixed(1))}${metric('POINTS / SHOT',bestPoints.efficiency === null ? '—' : bestPoints.efficiency.toFixed(2))}${metric('ACCURACY',bestPoints.accuracy === null ? '—' : `${Math.round(bestPoints.accuracy*100)}%`)}</div>`;
+  else $('pairSummary').innerHTML = `<div class="pair-winner"><span>MAX POINTS</span><strong>${escapeHtml(pairName(bestPoints))}</strong><small>${bestPoints.expectedPoints.toFixed(1)} points / run</small></div><div class="pair-winner"><span>MAX EFFICIENCY</span><strong>${bestEfficiency ? escapeHtml(pairName(bestEfficiency)) : '—'}</strong><small>${bestEfficiency ? `${bestEfficiency.efficiency.toFixed(2)} points / shot` : 'No shots logged'}</small></div>`;
+  $('pairTable').hidden = pairs.length < 2;
+  $('pairBoard').innerHTML = pairs.length > 1 ? pointsOrder.map(pair => `<div class="pair-row"><span><strong>${escapeHtml(pairName(pair))}</strong></span><span>${pair.expectedPoints.toFixed(1)}</span><span>${pair.efficiency === null ? '—' : pair.efficiency.toFixed(2)}</span><span>${pair.accuracy === null ? '—' : `${Math.round(pair.accuracy*100)}%`}</span></div>`).join('') : '';
 }
 function renderHistory(list) {
   $('recordCount').textContent = `${list.length} ${list.length === 1 ? 'ENTRY' : 'ENTRIES'}`;

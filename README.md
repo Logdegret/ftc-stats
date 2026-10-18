@@ -4,6 +4,7 @@ A browser-based tracker for FTC BIOBUZZ training, matches, and team scouting.
 
 - Log pollen shots attempted and landed, hive tips, and pollen remaining in a hive cell.
 - Compare driver accuracy and estimated hive points across training and matches.
+- Compare two-driver combinations by projected points per run and points per shot.
 - Look up FTC team profiles and every ranked season available through FTCScout.
 - Review a preliminary partner outlook based on within-season rank percentiles, with recent seasons weighted more heavily and local reliability notes included.
 - Record team scouting observations, reliability ratings, and notes.
