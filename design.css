@@ -103,3 +103,19 @@ footer{border-top-color:#e2e8de;font-family:'DM Mono',monospace;color:#9aac9c}
 @media(max-width:1050px){.shell{grid-template-columns:210px minmax(0,1fr)}.sidebar{padding:26px 17px}.hero h1{font-size:clamp(42px,5vw,64px)}}
 @media(max-width:760px){.shell{display:block}.sidebar{border-right:0;padding:14px 20px}.brand{font-size:17px}.brand-icon{width:34px;height:34px}.topbar{height:60px;padding:0 20px}.hero{min-height:305px;padding:36px 22px}.hero h1{font-size:clamp(42px,10vw,58px);letter-spacing:-2.9px}.hero h1 em{letter-spacing:-1.5px}.hero-mark{opacity:.25;right:-95px}.hero p{max-width:330px}.content{padding:33px 18px 55px}.stat-card{min-height:139px;padding:17px}.stat-value{font-size:35px}.panel{padding:20px}.pair-summary{padding:23px}.pair-title strong{font-size:27px}.pair-metrics{gap:28px}.pair-metric strong{font-size:26px}.entry-form{padding:20px}.online-lookup{padding:20px}}
 @media(max-width:480px){.top-actions{gap:9px}.breadcrumb{font-size:8px}.text-btn{font-size:9px}.hero h1{font-size:44px}.hero p{font-size:12px}.section-heading h2{font-size:23px}.stat-card{min-height:124px}.stat-value{font-size:32px}.stat-title{font-size:8px}.pair-metrics{gap:11px}.pair-metric span{font-size:8px}.pair-metric strong{font-size:22px}.pair-title strong{font-size:26px}.form-grid{gap:13px}}
+/* Two people share one session entry. */
+.session-meta{display:grid;grid-template-columns:220px minmax(0,1fr);gap:16px;padding-bottom:23px;border-bottom:1px solid #e8eee6}
+.session-meta label,.driver-fields label{display:flex;flex-direction:column;gap:8px;font-family:'DM Mono',monospace;font-weight:500;font-size:9px;letter-spacing:.5px;color:#63806b}
+.session-meta input,.session-meta select,.driver-fields input,.driver-fields select{width:100%;height:44px;border:1px solid #dce5da;background:#f9fbf6;color:#1e3d2d;border-radius:9px;padding:0 12px;font:500 13px 'DM Sans',sans-serif;outline:none}
+.session-meta input:focus,.session-meta select:focus,.driver-fields input:focus,.driver-fields select:focus{border-color:#4b916b;box-shadow:0 0 0 3px #dbeed6}
+.two-driver-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;margin-top:24px}
+.driver-entry{min-width:0;margin:0;padding:20px;border:1px solid #e3ebe1;border-radius:13px;background:#fbfcf9}
+.driver-entry legend{padding:0 8px;color:#4c7b59;font:500 10px 'DM Mono',monospace;letter-spacing:1px}
+.driver-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:17px 14px}
+.driver-name-field{grid-column:1/-1}
+.driver-fields .role-field{grid-column:1/-1}
+.role-pill{display:inline-block;margin-left:7px;padding:3px 7px;border-radius:999px;background:#e6efdb;color:#466d43;font:500 9px 'DM Mono',monospace;vertical-align:middle}
+.role-pill.shooter{background:#f6ead9;color:#92633d}
+.role-pill.both{background:#e4e9ef;color:#4e637c}
+@media(max-width:920px){.two-driver-grid{grid-template-columns:1fr}}
+@media(max-width:480px){.session-meta{grid-template-columns:1fr}.driver-entry{padding:16px}.driver-fields{gap:13px 10px}}

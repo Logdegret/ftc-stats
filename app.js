@@ -13,6 +13,7 @@ function loadEntries() {
 function validEntry(entry) {
   return entry && typeof entry.driver === 'string' && typeof entry.match === 'string' &&
     (!entry.type || ['training','match'].includes(entry.type)) &&
+    (!entry.role || ['driver','shooter','both'].includes(entry.role)) &&
     ['attempts','made','tips','retained'].every(k => Number.isInteger(entry[k]) && entry[k] >= 0 && entry[k] <= 999) &&
     entry.made <= entry.attempts;
 }
@@ -21,12 +22,22 @@ function escapeHtml(value) { return String(value).replace(/[&<>"']/g, c => ({'&'
 function points(e) { return e.tips * 20 + e.retained * 2; }
 function percent(made, attempts) { return attempts ? Math.round(made / attempts * 100) + '%' : '—'; }
 function sum(list, key) { return list.reduce((total, e) => total + e[key], 0); }
+function groupSessions(list) {
+  const groups = new Map();
+  list.forEach(e => {
+    const key = e.groupId || e.id;
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key).push(e);
+  });
+  return [...groups.values()];
+}
 
 function render() {
   const drivers = [...new Set(entries.map(e => e.driver))].sort((a,b) => a.localeCompare(b));
   if (selectedDriver !== 'all' && !drivers.includes(selectedDriver)) selectedDriver = 'all';
   $('driverFilter').innerHTML = '<option value="all">All drivers</option>' + drivers.map(d => `<option value="${escapeHtml(d)}">${escapeHtml(d)}</option>`).join('');
   $('driverFilter').value = selectedDriver;
+  $('driverNames').innerHTML = drivers.map(d => `<option value="${escapeHtml(d)}"></option>`).join('');
   const visible = entries.filter(e => (selectedDriver === 'all' || e.driver === selectedDriver) && (selectedType === 'all' || (e.type || 'match') === selectedType));
   const attempts = sum(visible, 'attempts');
   const made = sum(visible, 'made');
@@ -41,7 +52,7 @@ function render() {
 }
 
 function renderTrend(list) {
-  const recent = list.slice(-8);
+  const recent = groupSessions(list).slice(-8).map(group => ({match:group[0].match,tips:sum(group,'tips')}));
   if (!recent.length) { $('trend').innerHTML = '<div class="empty-chart">Your trend will appear here after you log a session.</div>'; return; }
   const max = Math.max(1, ...recent.map(e => e.tips));
   $('trend').innerHTML = recent.map(e => `<div class="bar-wrap" title="${escapeHtml(e.match)} · ${e.tips} tips"><span class="bar-value">${e.tips}</span><div class="bar" style="height:${Math.max(3, e.tips / max * 112)}px"></div><span class="bar-label">${escapeHtml(e.match)}</span></div>`).join('');
@@ -79,19 +90,33 @@ function renderDriverPairs(list) {
   $('pairBoard').innerHTML = pairs.length > 1 ? pointsOrder.map(pair => `<div class="pair-row"><span><strong>${escapeHtml(pairName(pair))}</strong></span><span>${pair.expectedPoints.toFixed(1)}</span><span>${pair.efficiency === null ? '—' : pair.efficiency.toFixed(2)}</span><span>${pair.accuracy === null ? '—' : `${Math.round(pair.accuracy*100)}%`}</span></div>`).join('') : '';
 }
 function renderHistory(list) {
-  $('recordCount').textContent = `${list.length} ${list.length === 1 ? 'ENTRY' : 'ENTRIES'}`;
-  $('historyBody').innerHTML = list.length ? [...list].reverse().map(e => `<tr><td class="match-cell">${escapeHtml(e.match)}</td><td><span class="type-pill ${e.type === 'training' ? 'training' : ''}">${e.type === 'training' ? 'Training' : 'Match'}</span></td><td class="driver-cell">${escapeHtml(e.driver)}</td><td>${e.attempts}</td><td>${e.made}</td><td><span class="tip-pill">${e.tips}</span></td><td>${percent(e.made,e.attempts)}</td><td>${points(e)}</td><td><button class="delete-btn" type="button" data-delete="${escapeHtml(e.id)}" aria-label="Delete ${escapeHtml(e.match)} for ${escapeHtml(e.driver)}" title="Delete entry">×</button></td></tr>`).join('') : '<tr><td colspan="9" class="empty-table">No sessions yet. Log your first run above.</td></tr>';
+  const sessions = groupSessions(list);
+  $('recordCount').textContent = `${sessions.length} ${sessions.length === 1 ? 'SESSION' : 'SESSIONS'}`;
+  $('historyBody').innerHTML = sessions.length ? sessions.reverse().map(group => {
+    const e = group[0], attempts = sum(group,'attempts'), made = sum(group,'made');
+    const names = group.map(x => `${escapeHtml(x.driver)}${x.role ? `<span class="role-pill ${escapeHtml(x.role)}">${escapeHtml(x.role[0].toUpperCase() + x.role.slice(1))}</span>` : ''}`).join('<br>');
+    const totalPoints = group.reduce((total,x) => total + points(x),0);
+    const key = e.groupId || e.id;
+    return `<tr><td class="match-cell">${escapeHtml(e.match)}</td><td><span class="type-pill ${e.type === 'training' ? 'training' : ''}">${e.type === 'training' ? 'Training' : 'Match'}</span></td><td class="driver-cell">${names}</td><td>${attempts}</td><td>${made}</td><td><span class="tip-pill">${sum(group,'tips')}</span></td><td>${percent(made,attempts)}</td><td>${totalPoints}</td><td><button class="delete-btn" type="button" data-delete="${escapeHtml(key)}" aria-label="Delete session ${escapeHtml(e.match)}" title="Delete session">×</button></td></tr>`;
+  }).join('') : '<tr><td colspan="9" class="empty-table">No sessions yet. Log your first run above.</td></tr>';
 }
 
 $('matchForm').addEventListener('submit', event => {
   event.preventDefault();
   const form = event.currentTarget;
   const data = new FormData(form);
-  const entry = { id: crypto.randomUUID(), type: String(data.get('type')), driver: String(data.get('driver') || '').trim(), match: String(data.get('match') || '').trim() };
-  for (const key of ['attempts','made','tips','retained']) entry[key] = Number(data.get(key));
-  if (!entry.driver || !entry.match || !validEntry(entry)) { $('formError').textContent = 'Enter a driver and session ID. Counts must be whole numbers from 0–999, and landed shots cannot exceed attempts.'; return; }
+  const groupId = crypto.randomUUID();
+  const type = String(data.get('type'));
+  const match = String(data.get('match') || '').trim();
+  const newEntries = [1,2].map(number => {
+    const entry = {id:crypto.randomUUID(),groupId,type,match,driver:String(data.get(`driver${number}`) || '').trim(),role:String(data.get(`role${number}`) || '')};
+    for (const key of ['attempts','made','tips','retained']) entry[key] = Number(data.get(`${key}${number}`));
+    return entry;
+  });
+  if (!match || newEntries.some(e => !e.driver || !validEntry(e))) { $('formError').textContent = 'Enter both driver names and a session ID. Counts must be whole numbers from 0–999, and landed shots cannot exceed attempts.'; return; }
+  if (newEntries[0].driver.toLowerCase() === newEntries[1].driver.toLowerCase()) { $('formError').textContent = 'Choose two different drivers.'; return; }
   $('formError').textContent = '';
-  entries.push(entry); save(); render(); form.reset();
+  entries.push(...newEntries); save(); render(); form.reset();
   $('history').scrollIntoView({behavior:'smooth',block:'start'});
 });
 $('driverFilter').addEventListener('change', e => { selectedDriver = e.target.value; render(); });
@@ -100,14 +125,14 @@ $('entryType').addEventListener('change', e => { const match = e.target.value ==
 $('historyBody').addEventListener('click', e => {
   const button = e.target.closest('[data-delete]');
   if (!button) return;
-  if (!confirm('Delete this match entry?')) return;
-  entries = entries.filter(x => x.id !== button.dataset.delete); save(); render();
+  if (!confirm('Delete this session and its driver records?')) return;
+  entries = entries.filter(x => (x.groupId || x.id) !== button.dataset.delete); save(); render();
 });
 
 function csvCell(v) { return '"' + String(v).replace(/"/g,'""') + '"'; }
 $('exportBtn').addEventListener('click', () => {
-  const headers = ['type','driver','match','attempts','made','tips','retained'];
-  const csv = [headers.join(','), ...entries.map(e => headers.map(k => csvCell(e[k])).join(','))].join('\r\n');
+  const headers = ['type','driver','role','match','attempts','made','tips','retained','groupId'];
+  const csv = [headers.join(','), ...entries.map(e => headers.map(k => csvCell(e[k] ?? '')).join(','))].join('\r\n');
   const link = document.createElement('a');
   link.href = URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));
   link.download = 'hiveboard-driver-stats.csv'; link.click();
@@ -134,9 +159,12 @@ $('importInput').addEventListener('change', async e => {
     const headers = rows.shift()?.map(x => x.trim().replace(/^\uFEFF/,'')) || [];
     const required = ['driver','match','attempts','made','tips','retained'];
     if (!required.every(x => headers.includes(x))) throw new Error('Missing required columns');
+    const importedGroups = new Map();
     const imported = rows.filter(r => r.some(x => x.trim())).map(r => {
-      const e = {id:crypto.randomUUID(),type:headers.includes('type') ? (r[headers.indexOf('type')]||'match').trim().toLowerCase() : 'match',driver:(r[headers.indexOf('driver')]||'').trim(),match:(r[headers.indexOf('match')]||'').trim()};
+      const e = {id:crypto.randomUUID(),type:headers.includes('type') ? (r[headers.indexOf('type')]||'match').trim().toLowerCase() : 'match',driver:(r[headers.indexOf('driver')]||'').trim(),role:headers.includes('role') ? (r[headers.indexOf('role')]||'').trim().toLowerCase() : '',match:(r[headers.indexOf('match')]||'').trim()};
       for (const k of required.slice(2)) e[k] = Number(r[headers.indexOf(k)]);
+      const oldGroup = headers.includes('groupId') ? (r[headers.indexOf('groupId')]||'').trim() : '';
+      if (oldGroup) { const groupKey = `${oldGroup}:${e.type}:${e.match}`; if (!importedGroups.has(groupKey)) importedGroups.set(groupKey,crypto.randomUUID()); e.groupId = importedGroups.get(groupKey); }
       return e;
     });
     if (!imported.every(validEntry) || imported.some(x => !x.driver || !x.match)) throw new Error('Invalid match values');
