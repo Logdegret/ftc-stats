@@ -1,4 +1,4 @@
-# Hiveboard — FTC driver stats and scouting
+# 8iScout — FTC driver stats and scouting
 
 A browser-based tracker for FTC BIOBUZZ training, matches, and team scouting.
 

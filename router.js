@@ -5,7 +5,8 @@
     'team-drivers': ['#team-drivers'],
     log: ['#log'],
     history: ['#history'],
-    scouting: ['#scouting']
+    scouting: ['#scouting'],
+    account: ['#account']
   };
   const all = [...new Set(Object.values(pages).flat())].flatMap(sel => [...document.querySelectorAll(sel)]);
 

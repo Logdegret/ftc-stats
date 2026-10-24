@@ -152,7 +152,7 @@ $('exportBtn').addEventListener('click', () => {
   const csv = [headers.join(','), ...entries.map(e => headers.map(k => csvCell(e[k] ?? '')).join(','))].join('\r\n');
   const link = document.createElement('a');
   link.href = URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));
-  link.download = 'hiveboard-driver-stats.csv'; link.click();
+  link.download = '8iscout-driver-stats.csv'; link.click();
   setTimeout(() => URL.revokeObjectURL(link.href), 1000);
 });
 function parseCsv(text) {
@@ -187,7 +187,7 @@ $('importInput').addEventListener('change', async e => {
     if (!imported.every(validEntry) || imported.some(x => !x.driver || !x.match)) throw new Error('Invalid match values');
     if (!confirm(`Import ${imported.length} entries? They will be added to your current data.`)) return;
     entries.push(...imported); save(); render();
-  } catch { alert('Could not import that CSV. Use a Hiveboard export with valid whole-number counts.'); }
+  } catch { alert('Could not import that CSV. Use an 8iScout export with valid whole-number counts.'); }
   e.target.value='';
 });
 render();
@@ -327,17 +327,26 @@ $('scoutForm').addEventListener('submit', event => {
   const team = String(data.get('team')||'').trim();
   const o = {id:crypto.randomUUID(),team,teamName:onlineProfiles.get(team)?.name || '',round:String(data.get('round')||'').trim(),attempts:Number(data.get('attempts')),made:Number(data.get('made')),tips:Number(data.get('tips')),reliability:Number(data.get('reliability')),notes:String(data.get('notes')||'').trim()};
   if (!validObservation(o)) { $('scoutError').textContent = 'Enter a team number and run ID. Counts must be whole numbers from 0–999, and landed shots cannot exceed attempts.'; return; }
-  $('scoutError').textContent = ''; observations.push(o); saveScouting(); renderScouting(); form.reset();
+  $('scoutError').textContent = '';
+  if (window.cloudScout?.active()) { cloudScout.add(o).then(() => form.reset()).catch(err => { $('scoutError').textContent = err.message; }); return; }
+  observations.push(o); saveScouting(); renderScouting(); form.reset();
 });
 $('scoutHistory').addEventListener('click', event => {
   const button = event.target.closest('[data-scout-delete]'); if (!button) return;
   if (!confirm('Delete this scouting observation?')) return;
+  if (window.cloudScout?.active()) { cloudScout.remove(button.dataset.scoutDelete).catch(err => alert(err.message)); return; }
   observations = observations.filter(o => o.id !== button.dataset.scoutDelete); saveScouting(); renderScouting();
 });
 $('exportScoutBtn').addEventListener('click', () => {
   const headers = ['team','teamName','round','attempts','made','tips','reliability','notes'];
   const csv = [headers.join(','), ...observations.map(o => headers.map(k => csvCell(o[k])).join(','))].join('\r\n');
   const link = document.createElement('a'); link.href = URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));
-  link.download = 'hiveboard-scouting.csv'; link.click(); setTimeout(() => URL.revokeObjectURL(link.href),1000);
+  link.download = '8iscout-scouting.csv'; link.click(); setTimeout(() => URL.revokeObjectURL(link.href),1000);
 });
 renderScouting();
+// cloud.js swaps in the team's shared observations while signed in, and back to local ones on sign-out.
+window.scoutData = {
+  local: observations,
+  set(list) { observations = list; renderScouting(); },
+  restoreLocal() { observations = this.local; renderScouting(); }
+};

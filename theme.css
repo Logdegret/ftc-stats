@@ -184,3 +184,37 @@ img.brand-icon{background:none;border-radius:10px;display:block;flex:none;object
 .content>section:not([hidden]){margin-top:0}
 body:not([data-page="overview"]) .content{padding-top:40px}
 html{scroll-behavior:auto}
+
+/* Accounts + shared team scouting (cloud.js) */
+.nav-link b{font-weight:inherit}
+.sync-banner{display:flex;align-items:center;gap:8px;flex-wrap:wrap;background:var(--card);border:1px solid var(--border);border-radius:10px;padding:12px 14px;margin-bottom:14px;font-size:13px;color:var(--text-2)}
+.sync-banner.shared{background:var(--accent-bg);border-color:#1f5a32;color:#bbf7d0}
+.sync-banner a,.account-section a{color:var(--accent-2);font-weight:600}
+.sync-banner strong{color:var(--text)}
+.auth-card{max-width:520px}
+.auth-tabs{display:grid;grid-template-columns:1fr 1fr;gap:4px;background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:4px;margin-bottom:20px}
+.auth-tabs button{border:0;background:none;color:var(--text-2);font:600 14px 'Roboto',sans-serif;padding:10px;border-radius:7px;cursor:pointer;min-height:42px}
+.auth-tabs button.on{background:var(--accent-bg);color:var(--accent-2)}
+.submit-btn:disabled{opacity:.6;cursor:wait}
+.account-head{display:flex;justify-content:space-between;align-items:center;gap:12px;background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:18px 20px;margin-bottom:14px}
+.account-head strong{display:block;font-size:18px;margin-top:6px;color:var(--text)}
+.account-head small{color:var(--text-3);font-size:12px}
+.team-choice{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.team-choice h3,.team-card h3{font:700 20px 'Roboto',sans-serif;margin:6px 0 4px;color:var(--text)}
+.team-card h3 small{color:var(--text-3);font-weight:500;font-size:15px}
+.muted{color:var(--text-2);font-size:13px;margin:0 0 16px}
+.code-input{text-transform:uppercase;letter-spacing:4px;font-family:'Roboto Mono',monospace!important}
+.team-card-top{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;margin-bottom:10px}
+.join-code span{display:block;font:500 9px 'Roboto Mono',monospace;color:var(--text-3);letter-spacing:1px;margin-bottom:6px;text-align:right}
+.join-code button{background:var(--bg);border:1px dashed var(--accent);color:var(--accent-2);font:700 22px 'Roboto Mono',monospace;letter-spacing:4px;padding:8px 14px;border-radius:10px;cursor:pointer}
+.join-code button small{font:500 10px 'Roboto',sans-serif;letter-spacing:0;color:var(--text-3);margin-left:6px}
+.member-list{border-top:1px solid var(--border)}
+.member-row{display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-bottom:1px solid var(--border);font-size:14px;color:var(--text)}
+.member-row small{color:var(--text-3)}
+.text-btn.danger{color:#f87171}
+@media(max-width:760px){
+  .team-choice{grid-template-columns:1fr}
+  .team-card-top{flex-direction:column}
+  .join-code span{text-align:left}
+  .account-head{padding:14px 16px}
+}
