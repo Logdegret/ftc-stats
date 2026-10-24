@@ -134,7 +134,7 @@ $('matchForm').addEventListener('submit', event => {
   if (newEntries[0].driver.toLowerCase() === newEntries[1].driver.toLowerCase()) { $('formError').textContent = 'Choose two different drivers.'; return; }
   $('formError').textContent = '';
   entries.push(...newEntries); save(); render(); form.reset(); updateRoleFields();
-  $('history').scrollIntoView({behavior:'smooth',block:'start'});
+  location.hash = 'history';
 });
 $('driverFilter').addEventListener('change', e => { selectedDriver = e.target.value; render(); });
 $('typeFilter').addEventListener('change', e => { selectedType = e.target.value; render(); });

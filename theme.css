@@ -178,3 +178,9 @@ footer{border-top:1px solid var(--border);color:var(--text-3);background:var(--b
 
 /* Logo image replaces the old text glyph */
 img.brand-icon{background:none;border-radius:10px;display:block;flex:none;object-fit:contain}
+
+/* One tab per page (router.js) */
+[hidden]{display:none!important}
+.content>section:not([hidden]){margin-top:0}
+body:not([data-page="overview"]) .content{padding-top:40px}
+html{scroll-behavior:auto}
