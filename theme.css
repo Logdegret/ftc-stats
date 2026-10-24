@@ -1,0 +1,180 @@
+/* Dark green/black theme modeled on The Orange Alliance layout. Loaded last; overrides styles.css + design.css. */
+@import url('https://fonts.googleapis.com/css2?family=Roboto:ital,wght@0,400;0,500;0,700;0,900;1,700;1,900&family=Roboto+Mono:wght@400;500&display=swap');
+
+:root{
+  --bg:#121212;--surface:#1e1e1e;--card:#262626;--card-2:#2e2e2e;--border:#333;
+  --text:#f2f2f2;--text-2:#b3b3b3;--text-3:#808080;
+  --accent:#22c55e;--accent-2:#4ade80;--accent-bg:#15361f;--accent-ink:#04140a;
+  --ink:var(--text);--muted:var(--text-2);--line:var(--border);--cream:var(--bg);--green:var(--accent);--lime:var(--accent);--pale:var(--card);
+  color-scheme:dark;
+}
+html,body{background:var(--bg)}
+body{color:var(--text);font-family:'Roboto',system-ui,sans-serif}
+.brand small,.season-tag,.side-label,.rule-note strong,.rule-note a,.local-note,.breadcrumb,.eyebrow,.section-kicker,
+.filter-wrap label,.stat-title,.mini-tag,.bar-value,.bar-label,.record-count,.pair-title>span,.pair-winner>span,.pair-metric span,
+.pair-head,.form-grid label,.scout-form-grid label,.session-meta label,.driver-fields label,.driver-entry legend,.role-pill,
+.table-wrap table th,.partner-kicker,.lookup-season span,.season-history-heading span,footer{font-family:'Roboto Mono',monospace}
+h1,h2,h3,.stat-value,.pair-title strong,.pair-winner strong,.pair-metric strong,.lookup-name,.lookup-intro h3,
+.section-heading h2,.panel h2,.partner-outlook strong,.lookup-season strong,.season-history-heading strong,.pair-highlight strong{font-family:'Roboto',sans-serif}
+
+/* Sidebar */
+.sidebar{background:var(--surface);border-right:1px solid var(--border);color:var(--text)}
+.brand{font-family:'Roboto',sans-serif;font-weight:700;letter-spacing:-.3px}
+.brand-icon{background:var(--accent);color:var(--accent-ink);box-shadow:none}
+.brand small{color:var(--text-3)}
+.season-tag{background:var(--bg);border-color:var(--border);color:var(--text-2)}
+.live-dot{background:var(--accent);box-shadow:0 0 0 4px #22c55e25}
+.side-label{color:var(--text-3)}
+.nav-link{color:var(--text);font-size:14px;font-weight:500;padding:13px 14px;border-radius:8px}
+.nav-link span{color:var(--text-2)}
+.nav-link:hover{background:var(--card);color:var(--text);transform:none}
+.nav-link.active{background:var(--accent-bg);color:var(--accent-2)}
+.nav-link.active span{color:var(--accent-2)}
+.rule-note{background:var(--bg);border-color:var(--border)}
+.rule-note strong{color:var(--text-2)}
+.rule-note p{color:var(--text-2)}
+.rule-note b,.rule-note a{color:var(--accent-2)}
+.local-note{color:var(--text-3)}
+
+/* Top bar */
+.topbar{background:var(--surface);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:20}
+.breadcrumb{color:var(--text-2)}
+.breadcrumb span{color:var(--text-3)}
+.text-btn{color:var(--accent-2)}
+
+/* Hero: plain heading like TOA */
+.hero{background:var(--bg);color:var(--text);min-height:0;padding:56px clamp(22px,4.4vw,72px) 8px}
+.hero:before,.hero-mark{display:none}
+.hero .eyebrow,.eyebrow,.section-kicker{color:var(--accent-2)}
+.eyebrow-line{background:var(--accent)}
+.hero h1{font-weight:700;font-size:clamp(34px,4.4vw,56px);letter-spacing:-1.2px;line-height:1.05}
+.hero h1 em{font-family:'Roboto',sans-serif;font-weight:900;font-style:italic;letter-spacing:-1px;color:var(--accent);font-size:1em}
+.hero p{color:var(--text-2)}
+.primary-link,.submit-btn{background:var(--accent);color:var(--accent-ink);border-radius:8px;font-weight:700}
+.primary-link:hover,.submit-btn:hover{background:var(--accent-2)}
+
+/* Sections, cards */
+.section-heading h2,.panel h2{color:var(--text);font-weight:700;letter-spacing:-.5px}
+.section-heading p{color:var(--text-2)}
+.stat-card,.panel,.entry-form,.table-wrap,.online-lookup,.pair-table,.pair-summary{background:var(--surface);border:1px solid var(--border);box-shadow:none;color:var(--text);border-radius:14px}
+.stat-card.accent{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.stat-card.accent .stat-title,.stat-card.accent .stat-foot,.stat-card.accent .stat-title span{color:#0b3a1c}
+.stat-title,.stat-foot,.stat-title span{color:var(--text-2)}
+.stat-value{color:inherit}
+.mini-tag{background:var(--accent-bg);color:var(--accent-2)}
+.chart-area{border-bottom-color:var(--border)}
+.bar{background:linear-gradient(180deg,var(--accent),#166534)}
+.bar-value{color:var(--accent-2)}
+.bar-label,.empty-chart,.empty-board,.empty-table{color:var(--text-3)}
+.record-count{color:var(--text-2)}
+
+/* Driver pair */
+.pair-summary .empty-board{color:var(--text-3)}
+.pair-title>span,.pair-winner>span,.pair-metric span{color:var(--text-3)}
+.pair-title strong,.pair-winner strong{color:var(--text)}
+.pair-metric strong{color:var(--accent-2)}
+.pair-winner small{color:var(--text-2)}
+.pair-winner+.pair-winner{border-color:var(--border)}
+.pair-row{border-bottom-color:var(--border)}
+.pair-row strong{color:var(--text)}
+.pair-row small,.pair-head,.pair-head span:not(:first-child){color:var(--text-3)}
+.pair-row span:not(:first-child){color:var(--accent-2)}
+.pair-highlight{background:var(--accent-bg);color:var(--text)}
+.pair-highlight:nth-child(2){background:var(--card);color:var(--text)}
+.pair-note,.disclaimer,.lookup-source{color:var(--text-3)}
+
+/* Forms */
+.session-meta{border-bottom-color:var(--border)}
+.form-grid label,.scout-form-grid label,.session-meta label,.driver-fields label{color:var(--text-2)}
+.form-grid input,.form-grid select,.scout-form-grid input,.scout-form-grid select,.scout-form-grid textarea,
+.session-meta input,.session-meta select,.driver-fields input,.driver-fields select,.lookup-controls input,.filter-wrap select{
+  background:var(--bg);border:1px solid var(--border);color:var(--text);border-radius:8px}
+input::placeholder,textarea::placeholder{color:var(--text-3)}
+input:focus,select:focus,textarea:focus{border-color:var(--accent)!important;box-shadow:0 0 0 3px #22c55e33!important;outline:none}
+.driver-entry,.driver-entry[data-role="driver"],.driver-entry[data-role="shooter"]{background:var(--card);border-color:var(--border)}
+.driver-entry legend{color:var(--accent-2)}
+.form-bottom{border-top-color:var(--border)}
+.form-bottom p{color:var(--text-2)}
+.form-bottom strong{color:var(--text)}
+.form-error{color:#f87171}
+.role-pill{background:var(--accent-bg);color:var(--accent-2)}
+.role-pill.shooter{background:#3a2e1a;color:#fbbf24}
+.role-pill.both{background:#1e2a3a;color:#93c5fd}
+.type-pill,.tip-pill{background:var(--card-2);color:var(--text-2)}
+.type-pill.training{background:var(--accent-bg);color:var(--accent-2)}
+
+/* Tables */
+.table-wrap table th{background:var(--card);color:var(--text-3);border-color:var(--border)}
+.table-wrap table td{color:var(--text-2);border-color:var(--border)}
+.table-wrap table tr:hover td{background:#ffffff06}
+.delete-btn{color:var(--text-3);background:none}
+.delete-btn:hover{color:#f87171}
+.match-cell,.driver-cell{color:var(--text)}
+
+/* Scouting */
+.lookup-intro p{color:var(--text-2)}
+.lookup-result{background:var(--bg);border-color:var(--border);color:var(--text-2)}
+.lookup-name,.season-history-heading strong{color:var(--text)}
+.lookup-meta,.lookup-season small{color:var(--text-2)}
+.lookup-season span{color:var(--text-3)}
+.lookup-season strong,.season-table td strong{color:var(--accent-2)}
+.lookup-links a,.lookup-links button,.lookup-source a,.scout-team-link,.scouting-section .match-cell a,.scout-board-row strong{color:var(--accent-2)}
+.scout-team-link small{color:var(--text-3)}
+.partner-outlook{background:var(--accent-bg);border-color:#1f5a32;color:#bbf7d0}
+.partner-outlook.caution{background:#33270f;border-color:#5c4513;color:#fcd34d}
+.partner-outlook.neutral{background:var(--card);border-color:var(--border);color:var(--text-2)}
+.history-scroll{border-color:var(--border)}
+.season-table th{background:var(--card);color:var(--text-3)}
+.season-table td{color:var(--text-2);border-top-color:var(--border)}
+.history-message{background:var(--card);color:var(--text-3)}
+.scout-board-head{color:var(--text-3);border-bottom-color:var(--border)}
+.scout-board-row,.board-row{border-color:var(--border);color:var(--text-2)}
+
+footer{border-top:1px solid var(--border);color:var(--text-3);background:var(--bg)}
+
+/* ---------- Mobile ---------- */
+@media(max-width:760px){
+  .shell{display:block}
+  .sidebar{position:sticky;top:0;z-index:30;height:auto;min-height:0;padding:10px 0 0;border-right:0;border-bottom:1px solid var(--border);display:grid;grid-template-columns:1fr auto;align-items:center}
+  .brand{padding:0 16px;font-size:16px}
+  .brand-icon{width:30px;height:30px;font-size:20px}
+  .season-tag{margin:0 16px 0 0;padding:7px 10px;font-size:8px;border-radius:999px}
+  .side-label,.side-bottom{display:none}
+  .sidebar nav{grid-column:1/-1;display:flex;gap:4px;overflow-x:auto;padding:10px 12px;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+  .sidebar nav::-webkit-scrollbar{display:none}
+  .nav-link{flex:none;padding:9px 13px;font-size:13px;border-radius:999px;white-space:nowrap;background:var(--card)}
+  .nav-link span{font-size:15px;width:auto}
+  .topbar{position:static;height:auto;padding:12px 16px;flex-wrap:wrap;gap:8px}
+  .breadcrumb{display:none}
+  .top-actions{width:100%;justify-content:flex-end}
+  .text-btn{font-size:12px;padding:6px 0}
+  .hero{padding:32px 16px 0}
+  .hero h1{font-size:36px;letter-spacing:-.8px}
+  .content{padding:28px 16px 48px}
+  section[id],.hero{scroll-margin-top:120px}
+  .section-heading{flex-wrap:wrap;gap:12px}
+  .stats-grid{grid-template-columns:1fr 1fr!important;gap:10px}
+  .stat-card{min-height:0;padding:16px;border-radius:12px}
+  .stat-value{font-size:30px;margin-top:12px}
+  .entry-form,.online-lookup,.panel{padding:16px}
+  /* Bigger touch targets + 16px inputs to stop iOS zoom */
+  input,select,textarea{font-size:16px!important;min-height:46px}
+  textarea{min-height:90px}
+  .submit-btn,.primary-link{min-height:46px;justify-content:center}
+  .form-bottom{flex-direction:column;align-items:stretch;gap:14px}
+  .form-bottom .submit-btn{width:100%}
+  .lookup-controls{width:100%;display:flex}
+  .lookup-controls input{flex:1 1 auto;width:auto;min-width:0}
+  .lookup-controls .submit-btn{flex:none;width:auto}
+  .lookup-record{flex-direction:column}
+  .lookup-season{text-align:left;max-width:none}
+  .filters{max-width:none!important;display:flex!important;width:100%}
+  .filter-wrap{flex:1}
+  .filter-wrap select{max-width:none!important;width:100%}
+  .table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
+  footer{flex-direction:column;gap:6px;padding:20px 16px;font-size:9px}
+}
+@media(max-width:330px){.stats-grid{grid-template-columns:1fr!important}}
+
+/* Logo image replaces the old text glyph */
+img.brand-icon{background:none;border-radius:10px;display:block;flex:none;object-fit:contain}
